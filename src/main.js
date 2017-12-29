@@ -64,7 +64,8 @@ function inject() {
         }
     }
     class AjaxProxy {
-        constructor(fn) {
+        constructor(proxyFn) {
+            this.proxyFn = proxyFn;
             this.realAjax = new actualXMLHttpRequest();
             this.requestKey = {
                 url: null,
@@ -81,7 +82,7 @@ function inject() {
                 status: 0,
                 statusText: ""
             };
-            this.addXmlHttpRequestProperties(fn);
+            this.addXmlHttpRequestProperties(proxyFn);
         }
         getRequestKeyHash() {
             return AjaxProxy.md5(`${this.requestKey.url.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
@@ -93,11 +94,27 @@ function inject() {
         }
         send(data) {
             this.requestKey.data = data;
-            this.realAjax.send.apply(this.realAjax, arguments);
+            this.requestKeyHash = this.getRequestKeyHash();
+            AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
+                if (cachedResponseState == null) {
+                    this.realAjax.send.apply(this.realAjax, arguments);
+                }
+                else {
+                    this.isCacheHit = true;
+                    this.responseState = cachedResponseState;
+                    if (this.responseState.responseText == null) {
+                        this.responseState.responseText = this.responseState.response;
+                    }
+                    if (this.proxyFn.onreadystatechange) {
+                        let ev = new Event("readystatechange");
+                        console.log(ev);
+                        this.proxyFn.onreadystatechange(ev);
+                    }
+                }
+            });
         }
-        realAjax_onreadystatechange() {
+        realAjax_onreadystatechange(ev) {
             if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400) {
-                let hash = this.getRequestKeyHash();
                 Object.keys(this.responseState).forEach(prop => {
                     this.responseState[prop] = this.realAjax[prop];
                 });
@@ -105,26 +122,26 @@ function inject() {
                     delete this.responseState.responseText; // save some space
                 }
                 this.responseState.responseHeaders = this.realAjax.getAllResponseHeaders();
-                AjaxProxy.indexedDB.setItem(hash, this.responseState);
+                AjaxProxy.indexedDB.setItem(this.requestKeyHash, this.responseState);
+            }
+            if (this.proxyFn.onreadystatechange) {
+                return this.proxyFn.onreadystatechange(ev);
             }
         }
-        addXmlHttpRequestProperties(fn) {
+        addXmlHttpRequestProperties(proxyFn) {
             let that = this;
-            fn.open = function (method, url, async, user, password) {
+            proxyFn.open = function (method, url, async, user, password) {
                 that.open.apply(that, arguments);
             };
-            fn.send = function (data) {
+            proxyFn.send = function (data) {
                 that.send.apply(that, arguments);
             };
-            that.realAjax.onreadystatechange = function () {
-                that.realAjax_onreadystatechange();
-                if (fn.onreadystatechange) {
-                    return fn.onreadystatechange();
-                }
+            that.realAjax.onreadystatechange = function (ev) {
+                that.realAjax_onreadystatechange(ev);
             };
             // read-only properties
             Object.keys(that.responseState).forEach(function (item) {
-                Object.defineProperty(fn, item, {
+                Object.defineProperty(proxyFn, item, {
                     get: function () {
                         if (that.isCacheHit) {
                             return that.responseState[item];
@@ -137,14 +154,14 @@ function inject() {
             });
             // read/write properties
             ["ontimeout, timeout", "withCredentials", "onload", "onerror", "onprogress", "upload"].forEach(function (item) {
-                Object.defineProperty(fn, item, {
+                Object.defineProperty(proxyFn, item, {
                     get: function () { return that.realAjax[item]; },
                     set: function (val) { that.realAjax[item] = val; }
                 });
             });
             // methods
             ["addEventListener", "abort", "getAllResponseHeaders", "dispatchEvent", "getResponseHeader", "overrideMimeType", "setRequestHeader"].forEach(function (item) {
-                Object.defineProperty(fn, item, {
+                Object.defineProperty(proxyFn, item, {
                     value: function () { return that.realAjax[item].apply(that.realAjax, arguments); }
                 });
             });
@@ -195,6 +212,6 @@ document.head.appendChild(script);
 handle headers
 handle load events
 if disabled don't start db
-ignore errors
+setting for cache busting query params
 */ 
 //# sourceMappingURL=main.js.map
