@@ -110,8 +110,10 @@ function inject() {
             AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
                 if (cachedResponseState == null) {
                     this.realAjax.send.apply(this.realAjax, arguments);
+                    console.log("MISS", this.requestKey.url, this.requestKey.method);
                 }
                 else {
+                    console.log("HIT", this.requestKey.url, this.requestKey.method);
                     this.isCacheHit = true;
                     this.responseState = cachedResponseState;
                     if (this.responseState.responseText == null) {
@@ -143,7 +145,6 @@ function inject() {
                 return "";
             }
             let ret = matches[0].substr(matches[0].indexOf(":") + 1);
-            console.log(header, ret);
             return ret;
         }
         realAjax_onreadystatechange(ev) {
@@ -246,7 +247,7 @@ function inject() {
 }
 let script = document.createElement("script");
 script.innerHTML = inject.toString() + ";inject();";
-document.head.appendChild(script);
+document.documentElement.appendChild(script);
 /*
 handle load events
 if disabled don't start db
