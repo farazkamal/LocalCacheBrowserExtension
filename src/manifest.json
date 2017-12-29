@@ -4,7 +4,7 @@
   "description": "Cache ajax requests to your local machine, making page loads faster and more predictable.",
   "version": "1.0",
   "browser_action": {
-    "default_icon": "icon.png",
+    "default_icon": "icons/icon.png",
     "default_popup": "popup.html"
   },
   "content_scripts": [
@@ -15,9 +15,9 @@
     }
   ],
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon.png"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon.png"
   },
   "permissions": [
     "storage",
