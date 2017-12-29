@@ -100,7 +100,22 @@
         }
 
         private getRequestKeyHash(): string {
-            return AjaxProxy.md5(`${this.requestKey.url.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
+            let a = document.createElement("a");
+            a.href = this.requestKey.url;
+            let search = a.search;
+
+            if (search.startsWith("?")) {
+                search = search.substr(1);
+            }
+
+            let cacheBusters = ["_", "v"];
+            let qs = search.split("&").filter(s => {
+                return s !== "" && cacheBusters.filter(cb => s.startsWith(cb + "=")).length === 0;
+            });
+
+            search = qs.join("&");
+            a.search = search;
+            return AjaxProxy.md5(`${a.href.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
         }
 
         private open(method: string, url: string, async?: boolean, user?: string, password?: string): void {
@@ -127,11 +142,38 @@
 
                     if (this.proxyFn.onreadystatechange) {
                         let ev = new Event("readystatechange");
-                        console.log(ev);
-                        this.proxyFn.onreadystatechange(ev);
-                   }
+                        this.realAjax.dispatchEvent(ev);
+                    }
                 }
             });
+        }
+
+        private getAllResponseHeaders(): string {
+            if (!this.isCacheHit) {
+                return this.realAjax.getAllResponseHeaders();
+            }
+
+            if (this.responseState == null) {
+                return "";
+            }
+            return this.responseState.responseHeaders;
+        }
+
+        private getResponseHeader(header: string): string {
+            if (!this.isCacheHit) {
+                return this.realAjax.getResponseHeader(header);
+            }
+
+            let responseHeaders = this.getAllResponseHeaders().split("\n");
+            let matches = responseHeaders.filter(h => h.startsWith(header + ":"));
+
+            if (matches.length === 0) {
+                return "";
+            }
+
+            let ret = matches[0].substr(matches[0].indexOf(":") + 1);
+            console.log(header, ret);
+            return ret;
         }
 
         private realAjax_onreadystatechange(ev: Event): void {
@@ -164,6 +206,14 @@
                 that.send.apply(that, arguments);
             };
 
+            proxyFn.getResponseHeader = function (header: string): string {
+                return that.getResponseHeader(header);
+            }
+
+            proxyFn.getAllResponseHeaders = function (): string {
+                return that.getAllResponseHeaders();
+            }
+
             that.realAjax.onreadystatechange = function (ev: Event) {
                 that.realAjax_onreadystatechange(ev);
             };
@@ -191,7 +241,7 @@
             });
 
             // methods
-            ["addEventListener", "abort", "getAllResponseHeaders", "dispatchEvent", "getResponseHeader", "overrideMimeType", "setRequestHeader"].forEach(function (item) {
+            ["addEventListener", "abort", "dispatchEvent", "overrideMimeType", "setRequestHeader"].forEach(function (item) {
                 Object.defineProperty(proxyFn, item, {
                     value: function () { return that.realAjax[item].apply(that.realAjax, arguments); }
                 });
@@ -231,7 +281,6 @@ interface RequestKey {
 }
 
 /*
-handle headers
 handle load events
 if disabled don't start db
 setting for cache busting query params

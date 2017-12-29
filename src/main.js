@@ -85,7 +85,19 @@ function inject() {
             this.addXmlHttpRequestProperties(proxyFn);
         }
         getRequestKeyHash() {
-            return AjaxProxy.md5(`${this.requestKey.url.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
+            let a = document.createElement("a");
+            a.href = this.requestKey.url;
+            let search = a.search;
+            if (search.startsWith("?")) {
+                search = search.substr(1);
+            }
+            let cacheBusters = ["_", "v"];
+            let qs = search.split("&").filter(s => {
+                return s !== "" && cacheBusters.filter(cb => s.startsWith(cb + "=")).length === 0;
+            });
+            search = qs.join("&");
+            a.search = search;
+            return AjaxProxy.md5(`${a.href.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
         }
         open(method, url, async, user, password) {
             this.requestKey.url = url;
@@ -107,11 +119,32 @@ function inject() {
                     }
                     if (this.proxyFn.onreadystatechange) {
                         let ev = new Event("readystatechange");
-                        console.log(ev);
-                        this.proxyFn.onreadystatechange(ev);
+                        this.realAjax.dispatchEvent(ev);
                     }
                 }
             });
+        }
+        getAllResponseHeaders() {
+            if (!this.isCacheHit) {
+                return this.realAjax.getAllResponseHeaders();
+            }
+            if (this.responseState == null) {
+                return "";
+            }
+            return this.responseState.responseHeaders;
+        }
+        getResponseHeader(header) {
+            if (!this.isCacheHit) {
+                return this.realAjax.getResponseHeader(header);
+            }
+            let responseHeaders = this.getAllResponseHeaders().split("\n");
+            let matches = responseHeaders.filter(h => h.startsWith(header + ":"));
+            if (matches.length === 0) {
+                return "";
+            }
+            let ret = matches[0].substr(matches[0].indexOf(":") + 1);
+            console.log(header, ret);
+            return ret;
         }
         realAjax_onreadystatechange(ev) {
             if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400) {
@@ -135,6 +168,12 @@ function inject() {
             };
             proxyFn.send = function (data) {
                 that.send.apply(that, arguments);
+            };
+            proxyFn.getResponseHeader = function (header) {
+                return that.getResponseHeader(header);
+            };
+            proxyFn.getAllResponseHeaders = function () {
+                return that.getAllResponseHeaders();
             };
             that.realAjax.onreadystatechange = function (ev) {
                 that.realAjax_onreadystatechange(ev);
@@ -160,7 +199,7 @@ function inject() {
                 });
             });
             // methods
-            ["addEventListener", "abort", "getAllResponseHeaders", "dispatchEvent", "getResponseHeader", "overrideMimeType", "setRequestHeader"].forEach(function (item) {
+            ["addEventListener", "abort", "dispatchEvent", "overrideMimeType", "setRequestHeader"].forEach(function (item) {
                 Object.defineProperty(proxyFn, item, {
                     value: function () { return that.realAjax[item].apply(that.realAjax, arguments); }
                 });
@@ -209,7 +248,6 @@ let script = document.createElement("script");
 script.innerHTML = inject.toString() + ";inject();";
 document.head.appendChild(script);
 /*
-handle headers
 handle load events
 if disabled don't start db
 setting for cache busting query params
