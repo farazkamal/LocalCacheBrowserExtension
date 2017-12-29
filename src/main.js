@@ -82,23 +82,29 @@ function inject() {
                 statusText: "",
                 responseHeaders: ""
             };
-            this.fakeProperties(fn);
+            this.addXmlHttpRequestProperties(fn);
         }
-        fakeProperties(fn) {
+        open(method, url, async, user, password) {
+            this.requestKey.url = url;
+            this.requestKey.method = method || "GET";
+            this.realAjax.open.apply(this.realAjax, arguments);
+        }
+        send(data) {
+            this.requestKey.data = data;
+            this.realAjax.send.apply(this.realAjax, arguments);
+        }
+        addXmlHttpRequestProperties(fn) {
             let that = this;
             fn.open = function (method, url, async, user, password) {
-                that.requestKey.url = url;
-                that.requestKey.method = method || "GET";
-                that.realAjax.open.apply(that.realAjax, arguments);
+                that.open.apply(that, arguments);
             };
             fn.send = function (data) {
-                that.requestKey.data = data;
-                that.realAjax.send.apply(that.realAjax, arguments);
+                that.send.apply(that, arguments);
             };
             that.realAjax.onreadystatechange = function () {
                 if (fn.onreadystatechange) {
                     if (that.realAjax.readyState === 4) {
-                        console.log(that.realAjax.getAllResponseHeaders());
+                        console.log(2, that.realAjax.getAllResponseHeaders());
                     }
                     return fn.onreadystatechange();
                 }

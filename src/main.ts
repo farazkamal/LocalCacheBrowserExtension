@@ -94,27 +94,35 @@
                 responseHeaders: ""
             };
 
-            this.fakeProperties(fn);
+            this.addXmlHttpRequestProperties(fn);
         }
 
-        private fakeProperties(fn: any): void {
+        private open(method: string, url: string, async?: boolean, user?: string, password?: string): void {
+            this.requestKey.url = url;
+            this.requestKey.method = method || "GET";
+            this.realAjax.open.apply(this.realAjax, arguments);
+        }
+
+        private send(data: any): void {
+            this.requestKey.data = data;
+            this.realAjax.send.apply(this.realAjax, arguments);
+        }
+
+        private addXmlHttpRequestProperties(fn: any): void {
             let that = this;
 
             fn.open = function (method: string, url: string, async?: boolean, user?: string, password?: string): void {
-                that.requestKey.url = url;
-                that.requestKey.method = method || "GET";
-                that.realAjax.open.apply(that.realAjax, arguments);
+                that.open.apply(that, arguments);
             };
 
-            fn.send = function (data): void {
-                that.requestKey.data = data;
-                that.realAjax.send.apply(that.realAjax, arguments);
+            fn.send = function (data: any): void {
+                that.send.apply(that, arguments);
             };
 
             that.realAjax.onreadystatechange = function () {
                 if (fn.onreadystatechange) {
                     if (that.realAjax.readyState === 4) {
-                        console.log(that.realAjax.getAllResponseHeaders());
+                        console.log(2, that.realAjax.getAllResponseHeaders());
                     }
                     return fn.onreadystatechange();
                 }
