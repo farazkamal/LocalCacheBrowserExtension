@@ -29,14 +29,14 @@
             this.db.close();
         }
 
-        public async setItem(item: T, key: string): Promise<void> {
+        public async setItem(key: string, item: T): Promise<void> {
             await this.dbReady;
             let tx = this.db.transaction(this.storeName, "readwrite");
             let store = tx.objectStore(this.storeName);
             store.put(item, key);
         }
 
-        public async getItem(id: string): Promise<T> {
+        public async getItem(key: string): Promise<T> {
             await this.dbReady;
 
             let resolve: (item: T) => void;
@@ -47,7 +47,7 @@
             let tx = this.db.transaction(this.storeName, "readonly");
             let store = tx.objectStore(this.storeName);
 
-            let getter = store.get(id);
+            let getter = store.get(key);
             getter.onsuccess = () => {
                 resolve(getter.result);
             };
@@ -71,7 +71,7 @@
         private realAjax: XMLHttpRequest;
         private requestKey: RequestKey;
         private responseState: ResponseState;
-        private usingCache: boolean;
+        private isCacheHit: boolean;
 
         constructor(fn: any) {
             this.realAjax = new actualXMLHttpRequest();
@@ -90,11 +90,14 @@
                 responseURL: null,
                 responseXML: null,
                 status: 0,
-                statusText: "",
-                responseHeaders: ""
+                statusText: ""
             };
 
             this.addXmlHttpRequestProperties(fn);
+        }
+
+        private getRequestKeyHash(): string {
+            return AjaxProxy.md5(`${this.requestKey.url.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
         }
 
         private open(method: string, url: string, async?: boolean, user?: string, password?: string): void {
@@ -106,6 +109,23 @@
         private send(data: any): void {
             this.requestKey.data = data;
             this.realAjax.send.apply(this.realAjax, arguments);
+        }
+
+        private realAjax_onreadystatechange(): void {
+            if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400) {
+                let hash = this.getRequestKeyHash();
+
+                Object.keys(this.responseState).forEach(prop => {
+                    this.responseState[prop] = this.realAjax[prop];
+                });
+
+                if (this.responseState.responseText === this.responseState.response) {
+                    delete this.responseState.responseText; // save some space
+                }
+
+                this.responseState.responseHeaders = this.realAjax.getAllResponseHeaders();
+                AjaxProxy.indexedDB.setItem(hash, this.responseState);
+            }
         }
 
         private addXmlHttpRequestProperties(fn: any): void {
@@ -120,10 +140,9 @@
             };
 
             that.realAjax.onreadystatechange = function () {
+                that.realAjax_onreadystatechange();
+
                 if (fn.onreadystatechange) {
-                    if (that.realAjax.readyState === 4) {
-                        console.log(2, that.realAjax.getAllResponseHeaders());
-                    }
                     return fn.onreadystatechange();
                 }
             };
@@ -132,7 +151,7 @@
             Object.keys(that.responseState).forEach(function (item) {
                 Object.defineProperty(fn, item, {
                     get: function () {
-                        if (that.usingCache) {
+                        if (that.isCacheHit) {
                             return that.responseState[item];
                         }
                         else {
@@ -159,12 +178,10 @@
         }
     }
 
-    var unescape; // typing
+    var unescape = (window as any).unescape; // typing
 
     // create XMLHttpRequest proxy object
     var actualXMLHttpRequest = XMLHttpRequest;
-
-    // define constructor for my proxy object
     XMLHttpRequest = function () {
         new AjaxProxy(this);
     } as any;
@@ -183,7 +200,7 @@ interface ResponseState {
     responseXML: Document | null;
     status: number;
     statusText: string;
-    responseHeaders: string;
+    responseHeaders?: string;
 }
 
 interface RequestKey {
@@ -193,6 +210,8 @@ interface RequestKey {
 }
 
 /*
+handle headers
 handle load events
+if disabled don't start db
 ignore errors
 */

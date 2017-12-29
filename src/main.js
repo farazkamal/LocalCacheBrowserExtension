@@ -30,7 +30,7 @@ function inject() {
                 this.db.close();
             });
         }
-        setItem(item, key) {
+        setItem(key, item) {
             return __awaiter(this, void 0, void 0, function* () {
                 yield this.dbReady;
                 let tx = this.db.transaction(this.storeName, "readwrite");
@@ -38,7 +38,7 @@ function inject() {
                 store.put(item, key);
             });
         }
-        getItem(id) {
+        getItem(key) {
             return __awaiter(this, void 0, void 0, function* () {
                 yield this.dbReady;
                 let resolve;
@@ -47,7 +47,7 @@ function inject() {
                 });
                 let tx = this.db.transaction(this.storeName, "readonly");
                 let store = tx.objectStore(this.storeName);
-                let getter = store.get(id);
+                let getter = store.get(key);
                 getter.onsuccess = () => {
                     resolve(getter.result);
                 };
@@ -79,10 +79,12 @@ function inject() {
                 responseURL: null,
                 responseXML: null,
                 status: 0,
-                statusText: "",
-                responseHeaders: ""
+                statusText: ""
             };
             this.addXmlHttpRequestProperties(fn);
+        }
+        getRequestKeyHash() {
+            return AjaxProxy.md5(`${this.requestKey.url.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
         }
         open(method, url, async, user, password) {
             this.requestKey.url = url;
@@ -93,6 +95,19 @@ function inject() {
             this.requestKey.data = data;
             this.realAjax.send.apply(this.realAjax, arguments);
         }
+        realAjax_onreadystatechange() {
+            if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400) {
+                let hash = this.getRequestKeyHash();
+                Object.keys(this.responseState).forEach(prop => {
+                    this.responseState[prop] = this.realAjax[prop];
+                });
+                if (this.responseState.responseText === this.responseState.response) {
+                    delete this.responseState.responseText; // save some space
+                }
+                this.responseState.responseHeaders = this.realAjax.getAllResponseHeaders();
+                AjaxProxy.indexedDB.setItem(hash, this.responseState);
+            }
+        }
         addXmlHttpRequestProperties(fn) {
             let that = this;
             fn.open = function (method, url, async, user, password) {
@@ -102,10 +117,8 @@ function inject() {
                 that.send.apply(that, arguments);
             };
             that.realAjax.onreadystatechange = function () {
+                that.realAjax_onreadystatechange();
                 if (fn.onreadystatechange) {
-                    if (that.realAjax.readyState === 4) {
-                        console.log(2, that.realAjax.getAllResponseHeaders());
-                    }
                     return fn.onreadystatechange();
                 }
             };
@@ -113,7 +126,7 @@ function inject() {
             Object.keys(that.responseState).forEach(function (item) {
                 Object.defineProperty(fn, item, {
                     get: function () {
-                        if (that.usingCache) {
+                        if (that.isCacheHit) {
                             return that.responseState[item];
                         }
                         else {
@@ -168,10 +181,9 @@ function inject() {
         return md5;
     }();
     AjaxProxy.indexedDB = new IndexedDB("LocalCacheChromeExtension", "ResponseStates");
-    var unescape; // typing
+    var unescape = window.unescape; // typing
     // create XMLHttpRequest proxy object
     var actualXMLHttpRequest = XMLHttpRequest;
-    // define constructor for my proxy object
     XMLHttpRequest = function () {
         new AjaxProxy(this);
     };
@@ -180,7 +192,9 @@ let script = document.createElement("script");
 script.innerHTML = inject.toString() + ";inject();";
 document.head.appendChild(script);
 /*
+handle headers
 handle load events
+if disabled don't start db
 ignore errors
 */ 
 //# sourceMappingURL=main.js.map
