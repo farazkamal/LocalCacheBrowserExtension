@@ -1,4 +1,4 @@
-﻿function inject() {
+﻿function ScriptForLocalCacheChromeExtension() {
     class IndexedDB<T> {
         private db: IDBDatabase;
         private dbReady: Promise<void>;
@@ -145,6 +145,9 @@
                     if (this.proxyFn.onreadystatechange) {
                         let ev = new Event("readystatechange");
                         this.realAjax.dispatchEvent(ev);
+
+                        ev = new Event("load");
+                        this.realAjax.dispatchEvent(ev);
                     }
                 }
             });
@@ -178,13 +181,20 @@
         }
 
         private realAjax_onreadystatechange(ev: Event): void {
-            if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400 && !(this.realAjax.responseXML instanceof Node)) {
-                Object.keys(this.responseState).forEach(prop => {
-                    this.responseState[prop] = this.realAjax[prop];
-                });
+            if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400 && !((this.realAjax.responseType === "" || this.realAjax.responseType === "document") && this.realAjax.responseXML instanceof Node)) {
+                this.responseState.readyState = this.realAjax.readyState;
+                this.responseState.response = this.realAjax.response;
+                this.responseState.responseType = this.realAjax.responseType;
+                this.responseState.responseURL = this.realAjax.responseURL;
+                this.responseState.status = this.realAjax.status;
+                this.responseState.statusText = this.realAjax.statusText;
 
-                if (this.responseState.responseText === this.responseState.response) {
-                    delete this.responseState.responseText; // save some space
+                if (this.realAjax.responseType === "" || this.realAjax.responseType === "document") {
+                    this.responseState.responseXML = this.realAjax.responseXML;
+                }
+
+                if ((this.realAjax.responseType === "" || this.realAjax.responseType === "text") && this.realAjax.responseText !== this.realAjax.response) {
+                    this.responseState.responseText = this.realAjax.responseText; // save some space
                 }
 
                 this.responseState.responseHeaders = this.realAjax.getAllResponseHeaders();
@@ -220,7 +230,7 @@
             };
 
             // read-only properties
-            Object.keys(that.responseState).forEach(function (item) {
+            Object.keys(that.responseState).filter(item => item != "responseType").forEach(function (item) {
                 Object.defineProperty(proxyFn, item, {
                     get: function () {
                         if (that.isCacheHit) {
@@ -234,7 +244,7 @@
             });
 
             // read/write properties
-            ["ontimeout, timeout", "withCredentials", "onload", "onerror", "onprogress", "upload"].forEach(function (item) {
+            ["ontimeout, timeout", "withCredentials", "onload", "onerror", "onprogress", "upload", "responseType"].forEach(function (item) {
                 Object.defineProperty(proxyFn, item, {
                     get: function () { return that.realAjax[item]; },
                     set: function (val) { that.realAjax[item] = val; }
@@ -262,7 +272,7 @@
 
 
 let script = document.createElement("script");
-script.innerHTML = inject.toString() + ";inject();";
+script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension();";
 document.documentElement.appendChild(script);
 
 interface ResponseState {
