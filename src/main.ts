@@ -130,8 +130,8 @@
 
             AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
                 if (cachedResponseState == null) {
-                    this.realAjax.send.apply(this.realAjax, arguments);
                     console.log("MISS", this.requestKey.url, this.requestKey.method);
+                    this.realAjax.send.apply(this.realAjax, arguments);
                 }
                 else {
                     console.log("HIT", this.requestKey.url, this.requestKey.method);
@@ -178,7 +178,7 @@
         }
 
         private realAjax_onreadystatechange(ev: Event): void {
-            if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400) {
+            if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400 && !(this.realAjax.responseXML instanceof Node)) {
                 Object.keys(this.responseState).forEach(prop => {
                     this.responseState[prop] = this.realAjax[prop];
                 });
@@ -251,6 +251,7 @@
     }
 
     var unescape = (window as any).unescape; // typing
+    var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) { return new (P || (P = Promise))(function (resolve, reject) { function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } } function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } } function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); } step((generator = generator.apply(thisArg, _arguments || [])).next()); }); };
 
     // create XMLHttpRequest proxy object
     var actualXMLHttpRequest = XMLHttpRequest;
@@ -285,5 +286,13 @@ interface RequestKey {
 /*
 handle load events
 if disabled don't start db
-setting for cache busting query params
+
+SETTINGS
+Pause
+Clear
+cache buster strings
+cache days
+black list methods
+black list ajax paths
+white list of website urls
 */
