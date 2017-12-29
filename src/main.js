@@ -107,24 +107,26 @@ function ScriptForLocalCacheChromeExtension() {
         send(data) {
             this.requestKey.data = data;
             this.requestKeyHash = this.getRequestKeyHash();
+            if (this.requestKey.method.toLocaleLowerCase() === "put") {
+                this.realAjax.send.apply(this.realAjax, arguments);
+                return;
+            }
             AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
                 if (cachedResponseState == null) {
                     console.log("MISS", this.requestKey.url, this.requestKey.method);
                     this.realAjax.send.apply(this.realAjax, arguments);
                 }
                 else {
-                    console.log("HIT", this.requestKey.url, this.requestKey.method, cachedResponseState);
+                    console.log("HIT", this.requestKey.url, this.requestKey.method);
                     this.isCacheHit = true;
                     this.responseState = cachedResponseState;
                     if ((this.responseState.responseType === "" || this.responseState.responseType === "text") && this.responseState.responseText == "") {
                         this.responseState.responseText = this.responseState.response;
                     }
-                    if (this.proxyFn.onreadystatechange) {
-                        let ev = new Event("readystatechange");
-                        this.realAjax.dispatchEvent(ev);
-                        ev = new Event("load");
-                        this.realAjax.dispatchEvent(ev);
-                    }
+                    let ev = new Event("readystatechange");
+                    this.realAjax.dispatchEvent(ev);
+                    ev = new Event("load");
+                    this.realAjax.dispatchEvent(ev);
                 }
             });
         }
@@ -150,7 +152,10 @@ function ScriptForLocalCacheChromeExtension() {
             return ret;
         }
         realAjax_onreadystatechange(ev) {
-            if (this.realAjax.readyState === 4 && !this.isCacheHit && this.realAjax.status < 400 && !((this.realAjax.responseType === "" || this.realAjax.responseType === "document") && this.realAjax.responseXML instanceof Node)) {
+            if (this.realAjax.readyState === 4 &&
+                !this.isCacheHit && this.realAjax.status < 400 &&
+                this.requestKey.method.toLocaleLowerCase() !== "put" &&
+                !((this.realAjax.responseType === "" || this.realAjax.responseType === "document") && this.realAjax.responseXML instanceof Node)) {
                 this.responseState.readyState = this.realAjax.readyState;
                 this.responseState.response = this.realAjax.response;
                 this.responseState.responseType = this.realAjax.responseType;
@@ -208,7 +213,7 @@ function ScriptForLocalCacheChromeExtension() {
                 });
             });
             // methods
-            ["addEventListener", "abort", "dispatchEvent", "overrideMimeType", "setRequestHeader"].forEach(function (item) {
+            ["addEventListener", "removeEventListener", "abort", "dispatchEvent", "overrideMimeType", "setRequestHeader"].forEach(function (item) {
                 Object.defineProperty(proxyFn, item, {
                     value: function () { return that.realAjax[item].apply(that.realAjax, arguments); }
                 });
@@ -268,7 +273,6 @@ let script = document.createElement("script");
 script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension();";
 document.documentElement.appendChild(script);
 /*
-handle load events
 if disabled don't start db
 
 SETTINGS
