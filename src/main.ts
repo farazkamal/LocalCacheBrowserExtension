@@ -134,11 +134,11 @@
                     this.realAjax.send.apply(this.realAjax, arguments);
                 }
                 else {
-                    console.log("HIT", this.requestKey.url, this.requestKey.method);
+                    console.log("HIT", this.requestKey.url, this.requestKey.method, cachedResponseState);
                     this.isCacheHit = true;
                     this.responseState = cachedResponseState;
 
-                    if (this.responseState.responseText == null) {
+                    if ((this.responseState.responseType === "" || this.responseState.responseType === "text") && this.responseState.responseText == "") {
                         this.responseState.responseText = this.responseState.response;
                     }
 
