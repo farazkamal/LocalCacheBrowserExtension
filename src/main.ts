@@ -1,6 +1,80 @@
-﻿var unescape;
+﻿function inject() {
+    class LocalCache {
+        private indexedDB: IndexedDB<ResponseState>;
 
-function inject() {
+        constructor() {
+            this.indexedDB = new IndexedDB<ResponseState>("LocalCacheChromeExtension", "ResponseStates");
+        }
+
+        
+    }
+
+    class IndexedDB<T> {
+        private db: IDBDatabase;
+        private dbReady: Promise<void>;
+        private storeName: string;
+
+        constructor(dbName: string, storeName: string) {
+            let resolve: () => void;
+            this.dbReady = new Promise<any>((r) => {
+                resolve = r;
+            });
+
+            this.storeName = storeName;
+            let open = indexedDB.open(dbName);
+
+            open.onupgradeneeded = () => {
+                let db: IDBDatabase = open.result;
+                db.createObjectStore(storeName);
+            };
+
+            open.onsuccess = (() => {
+                this.db = open.result;
+                resolve();
+            });
+        }
+
+        public async dispose(): Promise<void> {
+            await this.dbReady;
+            this.db.close();
+        }
+
+        public async setItem(item: T, key: string): Promise<void> {
+            await this.dbReady;
+            let tx = this.db.transaction(this.storeName, "readwrite");
+            let store = tx.objectStore(this.storeName);
+            store.put(item, key);
+        }
+
+        public async getItem(id: string): Promise<T> {
+            await this.dbReady;
+
+            let resolve: (item: T) => void;
+            let promise = new Promise<T>((r) => {
+                resolve = r;
+            });
+
+            let tx = this.db.transaction(this.storeName, "readonly");
+            let store = tx.objectStore(this.storeName);
+
+            let getter = store.get(id);
+            getter.onsuccess = () => {
+                resolve(getter.result);
+            };
+
+            return promise;
+        }
+
+        public async clear(): Promise<void> {
+            await this.dbReady;
+            let tx = this.db.transaction(this.storeName, "readwrite");
+            let store = tx.objectStore(this.storeName);
+            store.clear();
+        }
+    }
+
+    var unescape; // typing
+
     // create XMLHttpRequest proxy object
     var oldXMLHttpRequest = XMLHttpRequest;
 
@@ -19,7 +93,7 @@ function inject() {
             data: null
         }
 
-        let state: RequestState = {
+        let responseState: ResponseState = {
             readyState: 0,
             response: "",
             responseText: "",
@@ -27,7 +101,8 @@ function inject() {
             responseURL: null,
             responseXML: null,
             status: 0,
-            statusText: ""
+            statusText: "",
+            responseHeaders: ""
         };
 
         self.open = function (method: string, url: string, async?: boolean, user?: string, password?: string): void {
@@ -51,11 +126,11 @@ function inject() {
         };
 
         // read-only properties
-        Object.keys(state).forEach(function (item) {
+        Object.keys(responseState).forEach(function (item) {
             Object.defineProperty(self, item, {
                 get: function () {
                     if (usingCache) {
-                        return state[item];
+                        return responseState[item];
                     }
                     else {
                         return actual[item];
@@ -85,7 +160,7 @@ let script = document.createElement("script");
 script.innerHTML = inject.toString() + ";inject();";
 document.head.appendChild(script);
 
-interface RequestState {
+interface ResponseState {
     readyState: number;
     response: any;
     responseText: string;
@@ -94,6 +169,7 @@ interface RequestState {
     responseXML: Document | null;
     status: number;
     statusText: string;
+    responseHeaders: string;
 }
 
 interface RequestKey {
@@ -104,4 +180,5 @@ interface RequestKey {
 
 /*
 handle load events
+ignore errors
 */

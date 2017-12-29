@@ -1,11 +1,80 @@
-var unescape;
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 function inject() {
+    class LocalCache {
+        constructor() {
+            this.indexedDB = new IndexedDB("LocalCacheChromeExtension", "ResponseStates");
+        }
+    }
+    class IndexedDB {
+        constructor(dbName, storeName) {
+            let resolve;
+            this.dbReady = new Promise((r) => {
+                resolve = r;
+            });
+            this.storeName = storeName;
+            let open = indexedDB.open(dbName);
+            open.onupgradeneeded = () => {
+                let db = open.result;
+                db.createObjectStore(storeName);
+            };
+            open.onsuccess = (() => {
+                this.db = open.result;
+                resolve();
+            });
+        }
+        dispose() {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield this.dbReady;
+                this.db.close();
+            });
+        }
+        setItem(item, key) {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield this.dbReady;
+                let tx = this.db.transaction(this.storeName, "readwrite");
+                let store = tx.objectStore(this.storeName);
+                store.put(item, key);
+            });
+        }
+        getItem(id) {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield this.dbReady;
+                let resolve;
+                let promise = new Promise((r) => {
+                    resolve = r;
+                });
+                let tx = this.db.transaction(this.storeName, "readonly");
+                let store = tx.objectStore(this.storeName);
+                let getter = store.get(id);
+                getter.onsuccess = () => {
+                    resolve(getter.result);
+                };
+                return promise;
+            });
+        }
+        clear() {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield this.dbReady;
+                let tx = this.db.transaction(this.storeName, "readwrite");
+                let store = tx.objectStore(this.storeName);
+                store.clear();
+            });
+        }
+    }
+    var unescape; // typing
     // create XMLHttpRequest proxy object
     var oldXMLHttpRequest = XMLHttpRequest;
     // define constructor for my proxy object
     XMLHttpRequest = function () {
         // from https://github.com/blueimp/JavaScript-MD5/blob/master/js/md5.min.js
-        var md5 = function () {
+        let md5 = function () {
             "use strict";
             function t(n, t) { var r = (65535 & n) + (65535 & t); return (n >> 16) + (t >> 16) + (r >> 16) << 16 | 65535 & r; }
             function r(n, t) { return n << t | n >>> 32 - t; }
@@ -34,15 +103,15 @@ function inject() {
             function md5(n, t, r) { return t ? r ? s(t, n) : C(t, n) : r ? m(n) : p(n); }
             return md5;
         }();
-        var self = this;
-        var actual = new oldXMLHttpRequest();
-        var usingCache = false;
-        var key = {
+        let self = this;
+        let actual = new oldXMLHttpRequest();
+        let usingCache = false;
+        let key = {
             url: null,
             method: null,
             data: null
         };
-        var state = {
+        let responseState = {
             readyState: 0,
             response: "",
             responseText: "",
@@ -50,7 +119,8 @@ function inject() {
             responseURL: null,
             responseXML: null,
             status: 0,
-            statusText: ""
+            statusText: "",
+            responseHeaders: ""
         };
         self.open = function (method, url, async, user, password) {
             key.url = url;
@@ -70,11 +140,11 @@ function inject() {
             }
         };
         // read-only properties
-        Object.keys(state).forEach(function (item) {
+        Object.keys(responseState).forEach(function (item) {
             Object.defineProperty(self, item, {
                 get: function () {
                     if (usingCache) {
-                        return state[item];
+                        return responseState[item];
                     }
                     else {
                         return actual[item];
@@ -97,10 +167,11 @@ function inject() {
         });
     };
 }
-var script = document.createElement("script");
+let script = document.createElement("script");
 script.innerHTML = inject.toString() + ";inject();";
 document.head.appendChild(script);
 /*
 handle load events
+ignore errors
 */ 
 //# sourceMappingURL=main.js.map

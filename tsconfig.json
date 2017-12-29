@@ -1,7 +1,7 @@
 ﻿{
   "compileOnSave": true,
   "compilerOptions": {
-    "target": "es5",
+    "target": "es6",
     "module": "system",
     "moduleResolution": "node",
     "sourceMap": true,
@@ -15,9 +15,6 @@
   "exclude": [
     "node_modules",
     "obj",
-    "bin",
-    "TypescriptModules",
-    "Typings/commoncontrols",
-    "Typings/angularjs/1.3.6"
+    "bin"
   ]
 }
