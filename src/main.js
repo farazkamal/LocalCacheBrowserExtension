@@ -63,6 +63,13 @@ function ScriptForLocalCacheChromeExtension() {
             });
         }
     }
+    class StatusBar {
+        constructor() {
+        }
+        update() {
+            console.log(AjaxProxy.hits + " hits / " + AjaxProxy.misses + " misses / " + AjaxProxy.ignores + " ignores / " + AjaxProxy.pending + " pending");
+        }
+    }
     class AjaxProxy {
         constructor(proxyFn) {
             this.proxyFn = proxyFn;
@@ -108,27 +115,34 @@ function ScriptForLocalCacheChromeExtension() {
             this.requestKey.data = data;
             this.requestKeyHash = this.getRequestKeyHash();
             if (this.requestKey.method.toLocaleLowerCase() === "put") {
+                AjaxProxy.ignores++;
+                AjaxProxy.pending++;
+                AjaxProxy.statusBar.update();
                 this.realAjax.send.apply(this.realAjax, arguments);
-                return;
             }
-            AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
-                if (cachedResponseState == null) {
-                    console.log("MISS", this.requestKey.url, this.requestKey.method);
-                    this.realAjax.send.apply(this.realAjax, arguments);
-                }
-                else {
-                    console.log("HIT", this.requestKey.url, this.requestKey.method);
-                    this.isCacheHit = true;
-                    this.responseState = cachedResponseState;
-                    if ((this.responseState.responseType === "" || this.responseState.responseType === "text") && this.responseState.responseText == "") {
-                        this.responseState.responseText = this.responseState.response;
+            else {
+                AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
+                    if (cachedResponseState == null) {
+                        AjaxProxy.misses++;
+                        AjaxProxy.pending++;
+                        AjaxProxy.statusBar.update();
+                        this.realAjax.send.apply(this.realAjax, arguments);
                     }
-                    let ev = new Event("readystatechange");
-                    this.realAjax.dispatchEvent(ev);
-                    ev = new Event("load");
-                    this.realAjax.dispatchEvent(ev);
-                }
-            });
+                    else {
+                        AjaxProxy.hits++;
+                        AjaxProxy.statusBar.update();
+                        this.isCacheHit = true;
+                        this.responseState = cachedResponseState;
+                        if ((this.responseState.responseType === "" || this.responseState.responseType === "text") && this.responseState.responseText == "") {
+                            this.responseState.responseText = this.responseState.response;
+                        }
+                        let ev = new Event("readystatechange");
+                        this.realAjax.dispatchEvent(ev);
+                        ev = new Event("load");
+                        this.realAjax.dispatchEvent(ev);
+                    }
+                });
+            }
         }
         getAllResponseHeaders() {
             if (!this.isCacheHit) {
@@ -152,6 +166,7 @@ function ScriptForLocalCacheChromeExtension() {
             return ret;
         }
         realAjax_onreadystatechange(ev) {
+            // update the cache
             if (this.realAjax.readyState === 4 &&
                 !this.isCacheHit && this.realAjax.status < 400 &&
                 this.requestKey.method.toLocaleLowerCase() !== "put" &&
@@ -171,8 +186,15 @@ function ScriptForLocalCacheChromeExtension() {
                 this.responseState.responseHeaders = this.realAjax.getAllResponseHeaders();
                 AjaxProxy.indexedDB.setItem(this.requestKeyHash, this.responseState);
             }
+            if (this.realAjax.readyState == 4) {
+                AjaxProxy.pending--;
+                AjaxProxy.statusBar.update();
+            }
             if (this.proxyFn.onreadystatechange) {
                 return this.proxyFn.onreadystatechange(ev);
+            }
+            else {
+                return null;
             }
         }
         addXmlHttpRequestProperties(proxyFn) {
@@ -251,6 +273,11 @@ function ScriptForLocalCacheChromeExtension() {
         return md5;
     }();
     AjaxProxy.indexedDB = new IndexedDB("LocalCacheChromeExtension", "ResponseStates");
+    AjaxProxy.statusBar = new StatusBar();
+    AjaxProxy.hits = 0;
+    AjaxProxy.misses = 0;
+    AjaxProxy.pending = 0;
+    AjaxProxy.ignores = 0;
     var unescape = window.unescape; // typing
     var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) { return new (P || (P = Promise))(function (resolve, reject) { function fulfilled(value) { try {
         step(generator.next(value));
@@ -283,5 +310,6 @@ cache days
 black list methods
 black list ajax paths
 white list of website urls
+run in iframe
 */ 
 //# sourceMappingURL=main.js.map
