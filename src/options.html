@@ -25,13 +25,13 @@
                 border-bottom: solid 1px #ccc;
             }
 
-        .setting .description {
-            float: left;
-        }
+            .setting .description {
+                float: left;
+            }
 
-        .setting .control {
-            float: right;
-        }
+            .setting .control {
+                float: right;
+            }
 
         .clear {
             clear: both;
@@ -48,56 +48,55 @@
         #advancedSettingsLinkContainer {
             text-align: center;
         }
-        
     </style>
 </head>
 
 <body>
     <div class="setting border">
         <div class="description"><b>Disable</b> the cache</div>
-        <div class="control"><a href="javascript:;">disable</a></div>
+        <div class="control"><a id="enableDisableLink" href="#">disable</a></div>
         <div class="clear"></div>
     </div>
 
     <div class="setting border">
         <div class="description"><b>Hide</b> the status bar on the page</div>
-        <div class="control"><a href="javascript:;">hide</a></div>
+        <div class="control"><a id="showHideLink" href="#">hide</a></div>
         <div class="clear"></div>
     </div>
 
     <div class="setting border">
         <div class="description"><b>Number of days</b> after which cache expires (decimals allowed)</div>
-        <div class="control"><input type="number" /></div>
+        <div class="control"><input id="expirationInDays" type="number" /></div>
         <div class="clear"></div>
     </div>
 
     <div id="advancedSettingsLinkContainer" class="setting">
-        <a id="advancedSettingsLink" href="javascript:;">View Advanced Settings</a>
+        <a id="advancedSettingsLink" href="#">View Advanced Settings</a>
     </div>
 
     <div id="advancedSettings" class="hide">
         <div class="setting">
             <div><b>Query strings</b> to ignore, separated by new line (enter key)</div>
             <div class="subtle">You can ignore cache busting query strings, such as "_" used by jQuery, to increase the cache hit rate. This setting is case-sensitive.</div>
-            <textarea></textarea>
+            <textarea id="queryStringsToIgnore"></textarea>
         </div>
 
         <div class="setting">
             <div><b>Websites</b> to ENABLE caching for, separated by new line (enter key)</div>
             <div class="subtle">You may only want to enable caching for certain websites. Default is to enable caching for all websites. Caching will only be enabled for websites with a URL that starts with a provided URL. This setting is NOT case-sensitive.</div>
-            <textarea></textarea>
+            <textarea id="websiteWhiteList"></textarea>
         </div>
 
         <div class="setting">
             <div><b>Ajax URLs</b> to DISABLE caching for, separated by new line (enter key)</div>
             <div class="subtle">You may want to disable caching for certain ajax URLs. Default is to enable caching for all ajax URLs. Any ajax URL that starts with a provided URL will not be cached. This setting is NOT case-sensitive.</div>
-            <textarea></textarea>
+            <textarea id="ajaxUrlBlackList"></textarea>
         </div>
 
         <div class="setting">
             <div><b>HTTP methods</b> to DISABLE caching for, separated by new line (enter key)</div>
             <div class="subtle">You can disable caching for certain HTTP methods such as PUT and DELETE. This setting is NOT case-sensitive.</div>
-            <textarea></textarea>
+            <textarea id="httpMethodBlackList"></textarea>
         </div>
     </div>
 
