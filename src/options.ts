@@ -1,14 +1,17 @@
-class Options {
+﻿class Options {
     constructor() {
         document.getElementById("advancedSettingsLink").addEventListener("click", () => {
             document.getElementById("advancedSettingsLinkContainer").remove();
             document.getElementById("advancedSettings").className = document.getElementById("advancedSettings").className.replace("hide", "");
+            console.log(document.getElementById("advancedSettings").className)
         });
     }
 }
+
 document.addEventListener("DOMContentLoaded", function () {
     new Options();
 });
+
 /*
 // Saves options to chrome.storage.sync.
 function save_options() {
@@ -39,5 +42,4 @@ function restore_options() {
 
 document.addEventListener('DOMContentLoaded', restore_options);
 document.getElementById('save').addEventListener('click', save_options);
-*/ 
-//# sourceMappingURL=options.js.map
+*/

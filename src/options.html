@@ -5,7 +5,7 @@
     <style>
         body {
             margin: 0;
-            min-width: 450px;
+            min-width: 500px;
         }
 
         input {
@@ -41,9 +41,14 @@
             color: #888;
         }
 
-        #advancedSettings {
+        .hide {
+            display: none;
+        }
+
+        #advancedSettingsLinkContainer {
             text-align: center;
         }
+        
     </style>
 </head>
 
@@ -66,32 +71,36 @@
         <div class="clear"></div>
     </div>
 
-    <div id="advancedSettings" class="setting">
-        <a href="javascript:;">View Advanced Settings</a>
+    <div id="advancedSettingsLinkContainer" class="setting">
+        <a id="advancedSettingsLink" href="javascript:;">View Advanced Settings</a>
     </div>
 
-    <div class="setting">
-        <div><b>Query strings</b> to ignore, separated by new line (enter key)</div>
-        <div class="subtle">You can ignore cache busting query strings, such as "_" used by jQuery, to increase the cache hit rate. This setting is case-sensitive.</div>
-        <textarea></textarea>
+    <div id="advancedSettings" class="hide">
+        <div class="setting">
+            <div><b>Query strings</b> to ignore, separated by new line (enter key)</div>
+            <div class="subtle">You can ignore cache busting query strings, such as "_" used by jQuery, to increase the cache hit rate. This setting is case-sensitive.</div>
+            <textarea></textarea>
+        </div>
+
+        <div class="setting">
+            <div><b>Websites</b> to ENABLE caching for, separated by new line (enter key)</div>
+            <div class="subtle">You may only want to enable caching for certain websites. Default is to enable caching for all websites. Caching will only be enabled for websites with a URL that starts with a provided URL. This setting is NOT case-sensitive.</div>
+            <textarea></textarea>
+        </div>
+
+        <div class="setting">
+            <div><b>Ajax URLs</b> to DISABLE caching for, separated by new line (enter key)</div>
+            <div class="subtle">You may want to disable caching for certain ajax URLs. Default is to enable caching for all ajax URLs. Any ajax URL that starts with a provided URL will not be cached. This setting is NOT case-sensitive.</div>
+            <textarea></textarea>
+        </div>
+
+        <div class="setting">
+            <div><b>HTTP methods</b> to DISABLE caching for, separated by new line (enter key)</div>
+            <div class="subtle">You can disable caching for certain HTTP methods such as PUT and DELETE. This setting is NOT case-sensitive.</div>
+            <textarea></textarea>
+        </div>
     </div>
 
-    <div class="setting">
-        <div><b>Websites</b> to ENABLE caching for, separated by new line (enter key)</div>
-        <div class="subtle">You may only want to enable caching for certain websites. Default is to enable caching for all websites. Caching will only be enabled for websites with a URL that starts with a provided URL. This setting is NOT case-sensitive.</div>
-        <textarea></textarea>
-    </div>
-
-    <div class="setting">
-        <div><b>Ajax URLs</b> to DISABLE caching for, separated by new line (enter key)</div>
-        <div class="subtle">You may want to disable caching for certain ajax URLs. Default is to enable caching for all ajax URLs. Any ajax URL that starts with a provided URL will not be cached. This setting is NOT case-sensitive.</div>
-        <textarea></textarea>
-    </div>
-
-    <div class="setting">
-        <div><b>HTTP methods</b> to DISABLE caching for, separated by new line (enter key)</div>
-        <div class="subtle">You can disable caching for certain HTTP methods such as PUT and DELETE. This setting is NOT case-sensitive.</div>
-        <textarea></textarea>
-    </div>
+    <script src="options.js"></script>
 </body>
 </html>
