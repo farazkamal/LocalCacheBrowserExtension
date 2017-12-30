@@ -3,29 +3,95 @@
 <head>
     <title>My Test Extension Options</title>
     <style>
-        body: {
+        body {
+            margin: 0;
+            min-width: 450px;
+        }
+
+        input {
+            width: 50px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 75px;
+        }
+
+        .setting {
             padding: 10px;
+        }
+
+            .setting.border {
+                border-bottom: solid 1px #ccc;
+            }
+
+        .setting .description {
+            float: left;
+        }
+
+        .setting .control {
+            float: right;
+        }
+
+        .clear {
+            clear: both;
+        }
+
+        .subtle {
+            color: #888;
+        }
+
+        #advancedSettings {
+            text-align: center;
         }
     </style>
 </head>
 
 <body>
-    Favorite color:
-    <select id="color">
-        <option value="red">red</option>
-        <option value="green">green</option>
-        <option value="blue">blue</option>
-        <option value="yellow">yellow</option>
-    </select>
+    <div class="setting border">
+        <div class="description"><b>Disable</b> the cache</div>
+        <div class="control"><a href="javascript:;">disable</a></div>
+        <div class="clear"></div>
+    </div>
 
-    <label>
-        <input type="checkbox" id="like">
-        I like colors.
-    </label>
+    <div class="setting border">
+        <div class="description"><b>Hide</b> the status bar on the page</div>
+        <div class="control"><a href="javascript:;">hide</a></div>
+        <div class="clear"></div>
+    </div>
 
-    <div id="status"></div>
-    <button id="save">Save</button>
+    <div class="setting border">
+        <div class="description"><b>Number of days</b> after which cache expires (decimals allowed)</div>
+        <div class="control"><input type="number" /></div>
+        <div class="clear"></div>
+    </div>
 
-    <script src="options.js"></script>
+    <div id="advancedSettings" class="setting">
+        <a href="javascript:;">View Advanced Settings</a>
+    </div>
+
+    <div class="setting">
+        <div><b>Query strings</b> to ignore, separated by new line (enter key)</div>
+        <div class="subtle">You can ignore cache busting query strings, such as "_" used by jQuery, to increase the cache hit rate. This setting is case-sensitive.</div>
+        <textarea></textarea>
+    </div>
+
+    <div class="setting">
+        <div><b>Websites</b> to ENABLE caching for, separated by new line (enter key)</div>
+        <div class="subtle">You may only want to enable caching for certain websites. Default is to enable caching for all websites. Caching will only be enabled for websites with a URL that starts with a provided URL. This setting is NOT case-sensitive.</div>
+        <textarea></textarea>
+    </div>
+
+    <div class="setting">
+        <div><b>Ajax URLs</b> to DISABLE caching for, separated by new line (enter key)</div>
+        <div class="subtle">You may want to disable caching for certain ajax URLs. Default is to enable caching for all ajax URLs. Any ajax URL that starts with a provided URL will not be cached. This setting is NOT case-sensitive.</div>
+        <textarea></textarea>
+    </div>
+
+    <div class="setting">
+        <div><b>HTTP methods</b> to DISABLE caching for, separated by new line (enter key)</div>
+        <div class="subtle">You can disable caching for certain HTTP methods such as PUT and DELETE. This setting is NOT case-sensitive.</div>
+        <textarea></textarea>
+    </div>
 </body>
 </html>

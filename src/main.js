@@ -332,13 +332,17 @@ document.documentElement.appendChild(script);
 if disabled don't start db
 
 SETTINGS
-Pause
+Pause/Unpause
 Clear
-cache buster strings
+Hide/Unhide
 cache days
+
+cache buster strings
 black list methods
+
 black list ajax paths
 white list of website urls
+
 run in iframe
 */ 
 //# sourceMappingURL=main.js.map
