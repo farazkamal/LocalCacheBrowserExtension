@@ -74,7 +74,7 @@
 
             // icon
             let img = document.createElement("img");
-            img.style.cssText = "vertical-align:bottom; padding-right:7px";
+            img.style.cssText = "vertical-align:bottom; padding-right:7px; width:unset; display:inline; height:unset";
             img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAN1QAADdUBPdZY8QAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xOdTWsmQAAAG7SURBVDhPY8AH4jbMcQxbssExfv5+DqgQcSBnf5FGys7W7bEbZv8PX7bpf8CcE9+8p17bA8SV3tNvmoWu+s8MVYoK8s/7CxSeCu/LOpT3K2Vny38kA/77TLuOwFOvL4dqQYDiC77JJRd9XhaeCf+fdTjvPzYDvKdef+gz7VoKhguKz/vUADVfLr7gs7XgTPgnDAPmnvjkM/Vqtd+c67w+U69tBbrgnPe068ZQ7QwMQM1HgXhy/f96pvr99SwZhwstkne2VMZsmL0jfNmGGaHz90tAlTJ4TLzFDnTNeWB4rIEKgZzvcxJowP+SCz5nCs8F2EOFMYDvtGs+3tOuXQd7Z9q1DVBhJAOAGBwGh7LWJe+vV4FKM/jOPqsHdPZueCASNAAYBkAv/IzbMMUubNGOYP85J/4gaybKAFAgJmyanBK2ZHsNRjRS3YCSC94HSTfg+gqodgaG0nPeqkBDthFnwLV/QNtXAJO0NFQ7ApRe8vYCJqQbuAzwnnr1rM+UGzZQ5dhB2pk01qxDBYXAzPQ+DmhACNiAYy+8pl5Nrq//zwRVRhikbeoRSd7RKxQ6f4tE9OITfFBhNMDAAABc9ZyFtr+zcAAAAABJRU5ErkJggg==";
             this.elem.appendChild(img);
 
@@ -82,7 +82,7 @@
             this.messageElem = document.createElement("span");
             this.elem.appendChild(this.messageElem);
 
-            // tooltip
+            // help
             let help = document.createElement("a");
             help.style.cssText = "padding-left: 5px";
             help.innerText = "?";
