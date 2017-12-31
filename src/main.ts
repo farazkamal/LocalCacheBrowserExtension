@@ -1,4 +1,6 @@
-﻿function ScriptForLocalCacheChromeExtension() {
+﻿/// <reference path="options.ts" />
+
+function ScriptForLocalCacheChromeExtension(settings: Settings) {
     class IndexedDB<T> {
         private db: IDBDatabase;
         private dbReady: Promise<void>;
@@ -345,10 +347,26 @@
     } as any;
 }
 
+let settings: Settings = {
+    everSet: false,
+    disable: false,
+    hide: false,
+    expirationInDays: "7",
+    queryStringsToIgnore: "_\n",
+    websiteWhiteList: "",
+    ajaxUrlBlackList: "",
+    httpMethodBlackList: "PUT\nDELETE\nPATCH\n"
+}
 
-let script = document.createElement("script");
-script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension();";
-document.documentElement.appendChild(script);
+chrome.storage.sync.get(Object.keys(settings), (loadedSettings: Settings) => {
+    if (loadedSettings.everSet) {
+        settings = { ...loadedSettings };
+    }
+
+    let script = document.createElement("script");
+    script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension(" + JSON.stringify(settings) + ");";
+    document.documentElement.appendChild(script);
+});
 
 interface ResponseState {
     readyState: number;

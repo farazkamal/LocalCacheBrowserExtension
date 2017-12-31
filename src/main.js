@@ -1,3 +1,4 @@
+/// <reference path="options.ts" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -6,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-function ScriptForLocalCacheChromeExtension() {
+function ScriptForLocalCacheChromeExtension(settings) {
     class IndexedDB {
         constructor(dbName, storeName) {
             let resolve;
@@ -325,9 +326,24 @@ function ScriptForLocalCacheChromeExtension() {
         new AjaxProxy(this);
     };
 }
-let script = document.createElement("script");
-script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension();";
-document.documentElement.appendChild(script);
+let settings = {
+    everSet: false,
+    disable: false,
+    hide: false,
+    expirationInDays: "7",
+    queryStringsToIgnore: "_\n",
+    websiteWhiteList: "",
+    ajaxUrlBlackList: "",
+    httpMethodBlackList: "PUT\nDELETE\nPATCH\n"
+};
+chrome.storage.sync.get(Object.keys(settings), (loadedSettings) => {
+    if (loadedSettings.everSet) {
+        settings = Object.assign({}, loadedSettings);
+    }
+    let script = document.createElement("script");
+    script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension(" + JSON.stringify(settings) + ");";
+    document.documentElement.appendChild(script);
+});
 /*
 if disabled don't start db
 
