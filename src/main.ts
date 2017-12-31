@@ -163,7 +163,7 @@ function ScriptForLocalCacheChromeExtension(settings: Settings) {
                 search = search.substr(1);
             }
 
-            let cacheBusters = ["_", "v"];
+            let cacheBusters = this.stringToArray(settings.queryStringsToIgnore);
             let qs = search.split("&").filter(s => {
                 return s !== "" && cacheBusters.filter(cb => s.startsWith(cb + "=")).length === 0;
             });
@@ -171,6 +171,27 @@ function ScriptForLocalCacheChromeExtension(settings: Settings) {
             search = qs.join("&");
             a.search = search;
             return AjaxProxy.md5(`${a.href.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
+        }
+
+        private stringToArray(str: string): string[] {
+            return (str || "").replace(/\r/g, "\n").split("\n").map(s => s.trim()).filter(s => s != "");
+        }
+        private ignoreRequest(): boolean {
+            let httpMethodBlackList = this.stringToArray((settings.httpMethodBlackList || "").toLocaleLowerCase());
+
+            if (httpMethodBlackList.indexOf(this.requestKey.method.toLocaleLowerCase()) > -1) {
+                return true;
+            }
+
+            let ajaxUrlBlackList = this.stringToArray((settings.ajaxUrlBlackList || "").toLocaleLowerCase());
+
+            for (let i = 0; i < ajaxUrlBlackList.length; i++) {
+                if (this.requestKey.url.toLocaleLowerCase().startsWith(ajaxUrlBlackList[i])) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private open(method: string, url: string, async?: boolean, user?: string, password?: string): void {
@@ -183,7 +204,7 @@ function ScriptForLocalCacheChromeExtension(settings: Settings) {
             this.requestKey.data = data;
             this.requestKeyHash = this.getRequestKeyHash();
 
-            if (this.requestKey.method.toLocaleLowerCase() === "put") {
+            if (this.ignoreRequest()) {
                 AjaxProxy.ignores++;
                 AjaxProxy.pending++;
                 AjaxProxy.statusBar.update();

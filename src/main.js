@@ -128,13 +128,29 @@ function ScriptForLocalCacheChromeExtension(settings) {
             if (search.startsWith("?")) {
                 search = search.substr(1);
             }
-            let cacheBusters = ["_", "v"];
+            let cacheBusters = this.stringToArray(settings.queryStringsToIgnore);
             let qs = search.split("&").filter(s => {
                 return s !== "" && cacheBusters.filter(cb => s.startsWith(cb + "=")).length === 0;
             });
             search = qs.join("&");
             a.search = search;
             return AjaxProxy.md5(`${a.href.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
+        }
+        stringToArray(str) {
+            return (str || "").replace(/\r/g, "\n").split("\n").map(s => s.trim()).filter(s => s != "");
+        }
+        ignoreRequest() {
+            let httpMethodBlackList = this.stringToArray((settings.httpMethodBlackList || "").toLocaleLowerCase());
+            if (httpMethodBlackList.indexOf(this.requestKey.method.toLocaleLowerCase()) > -1) {
+                return true;
+            }
+            let ajaxUrlBlackList = this.stringToArray((settings.ajaxUrlBlackList || "").toLocaleLowerCase());
+            for (let i = 0; i < ajaxUrlBlackList.length; i++) {
+                if (this.requestKey.url.toLocaleLowerCase().startsWith(ajaxUrlBlackList[i])) {
+                    return true;
+                }
+            }
+            return false;
         }
         open(method, url, async, user, password) {
             this.requestKey.url = url;
@@ -144,7 +160,7 @@ function ScriptForLocalCacheChromeExtension(settings) {
         send(data) {
             this.requestKey.data = data;
             this.requestKeyHash = this.getRequestKeyHash();
-            if (this.requestKey.method.toLocaleLowerCase() === "put") {
+            if (this.ignoreRequest()) {
                 AjaxProxy.ignores++;
                 AjaxProxy.pending++;
                 AjaxProxy.statusBar.update();
