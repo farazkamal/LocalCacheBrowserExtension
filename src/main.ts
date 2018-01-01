@@ -103,6 +103,10 @@ function ScriptForLocalCacheChromeExtension(settings: Settings) {
         }
 
         public update(): void {
+            if (settings.hide) {
+                return;
+            }
+
             if (this.elem == null || this.elem.parentElement == null) {
                 this.initialize();
             }
@@ -382,6 +386,25 @@ let settings: Settings = {
 chrome.storage.sync.get(Object.keys(settings), (loadedSettings: Settings) => {
     if (loadedSettings.everSet) {
         settings = { ...loadedSettings };
+    }
+
+    if (settings.disable) {
+        return;
+    }
+
+    let websiteWhiteList = (settings.websiteWhiteList || "").toLocaleLowerCase().replace(/\r/g, "\n").split("\n").map(s => s.trim()).filter(s => s != "");
+
+    if (websiteWhiteList.length > 0) {
+        let match = false;
+        for (let i = 0; i < websiteWhiteList.length; i++) {
+            if (document.location.toString().toLocaleLowerCase().startsWith(websiteWhiteList[i])) {
+                match = true;
+            }
+        }
+
+        if (!match) {
+            return;
+        }
     }
 
     let script = document.createElement("script");
