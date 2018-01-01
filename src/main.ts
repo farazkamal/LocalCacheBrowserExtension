@@ -145,6 +145,7 @@ function ScriptForLocalCacheChromeExtension(settings: Settings) {
             };
 
             this.responseState = {
+                time: (new Date()).toISOString(),
                 readyState: 0,
                 response: "",
                 responseText: "",
@@ -180,6 +181,27 @@ function ScriptForLocalCacheChromeExtension(settings: Settings) {
         private stringToArray(str: string): string[] {
             return (str || "").replace(/\r/g, "\n").split("\n").map(s => s.trim()).filter(s => s != "");
         }
+
+        private responseIsExpired(responseState: ResponseState): boolean {
+            if (settings.expirationInDays == null) {
+                return false;
+            }
+
+            let expirationInDays = Number(settings.expirationInDays);
+
+            if (isNaN(expirationInDays)) {
+                return false;
+            }
+
+            let date = new Date(responseState.time);
+            let now = new Date();
+            let milliseconds = now.getTime() - date.getTime();
+            let days = milliseconds / 1000 / 60 / 60 / 24;
+
+            return days > expirationInDays;
+
+        }
+
         private ignoreRequest(): boolean {
             let httpMethodBlackList = this.stringToArray((settings.httpMethodBlackList || "").toLocaleLowerCase());
 
@@ -216,7 +238,7 @@ function ScriptForLocalCacheChromeExtension(settings: Settings) {
             }
             else {
                 AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
-                    if (cachedResponseState == null) {
+                    if (cachedResponseState == null || this.responseIsExpired(cachedResponseState)) {
                         AjaxProxy.misses++;
                         AjaxProxy.pending++;
                         AjaxProxy.statusBar.update();
@@ -413,6 +435,7 @@ chrome.storage.sync.get(Object.keys(settings), (loadedSettings: Settings) => {
 });
 
 interface ResponseState {
+    time: string;
     readyState: number;
     response: any;
     responseText: string;
