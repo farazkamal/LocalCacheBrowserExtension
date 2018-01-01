@@ -6,9 +6,10 @@
         body {
             margin: 0;
             min-width: 500px;
+            overflow-x: hidden;
         }
 
-        input {
+        input[type=number] {
             width: 50px;
         }
 
@@ -18,7 +19,7 @@
         }
 
         .setting {
-            padding: 10px;
+            padding: 10px 20px 10px 15px;
         }
 
             .setting.border {
@@ -59,7 +60,7 @@
     </div>
 
     <div class="setting border">
-        <div class="description"><b>Hide</b> the status bar on the page</div>
+        <div class="description"><b>Hide</b> the hit count and miss count panel</div>
         <div class="control"><a id="showHideLink" href="#">hide</a></div>
         <div class="clear"></div>
     </div>
@@ -70,8 +71,14 @@
         <div class="clear"></div>
     </div>
 
+    <div class="setting">
+        <div><b>Websites</b> to ENABLE caching for, separated by new line (enter key)</div>
+        <div class="subtle">Enter the list of websites (separted by new line) you would like to enable caching for. Caching will only be enabled for websites with a URL that starts with a provided URL. If this setting is left blank, the default is to enable caching for all websites. This setting is NOT case-sensitive.</div>
+        <textarea id="websiteWhiteList"></textarea>
+    </div>
+
     <div id="advancedSettingsLinkContainer" class="setting">
-        <a id="advancedSettingsLink" href="#">View Advanced Settings</a>
+        <a id="advancedSettingsLink" href="#">View All Settings</a>
     </div>
 
     <div id="advancedSettings" class="hide">
@@ -82,14 +89,8 @@
         </div>
 
         <div class="setting">
-            <div><b>Websites</b> to ENABLE caching for, separated by new line (enter key)</div>
-            <div class="subtle">You may only want to enable caching for certain websites. Default is to enable caching for all websites. Caching will only be enabled for websites with a URL that starts with a provided URL. This setting is NOT case-sensitive.</div>
-            <textarea id="websiteWhiteList"></textarea>
-        </div>
-
-        <div class="setting">
             <div><b>Ajax URLs</b> to DISABLE caching for, separated by new line (enter key)</div>
-            <div class="subtle">You may want to disable caching for certain ajax URLs. Default is to enable caching for all ajax URLs. Any ajax URL that starts with a provided URL will not be cached. This setting is NOT case-sensitive.</div>
+            <div class="subtle">You can disable caching for certain ajax URLs. Any ajax URL that starts with a provided URL will not be cached. Default is to enable caching for all ajax URLs. This setting is NOT case-sensitive.</div>
             <textarea id="ajaxUrlBlackList"></textarea>
         </div>
 

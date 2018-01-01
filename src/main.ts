@@ -452,21 +452,3 @@ interface RequestKey {
     method: string;
     data: any;
 }
-
-/*
-if disabled don't start db
-
-SETTINGS
-Pause/Unpause
-Clear
-Hide/Unhide
-cache days
-
-cache buster strings
-black list methods
-
-black list ajax paths
-white list of website urls
-
-run in iframe
-*/
