@@ -1,3 +1,4 @@
+/// <reference path="options.ts" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -6,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-function ScriptForLocalCacheChromeExtension() {
+function ScriptForLocalCacheChromeExtension(settings) {
     class IndexedDB {
         constructor(dbName, storeName) {
             let resolve;
@@ -63,6 +64,45 @@ function ScriptForLocalCacheChromeExtension() {
             });
         }
     }
+    class StatusBar {
+        initialize() {
+            this.elem = document.createElement("div");
+            this.elem.className = "ScriptForLocalCacheChromeExtension";
+            this.elem.style.cssText = "font-size:12px; position:fixed;box-shadow:1px 1px 4px #999;border-radius:3px;bottom:10px;right:10px;z-index:25000;padding:7px;background-color:white;";
+            // icon
+            let img = document.createElement("img");
+            img.style.cssText = "vertical-align:bottom; padding-right:7px; width:unset; display:inline; height:unset";
+            img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAN1QAADdUBPdZY8QAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xOdTWsmQAAAG7SURBVDhPY8AH4jbMcQxbssExfv5+DqgQcSBnf5FGys7W7bEbZv8PX7bpf8CcE9+8p17bA8SV3tNvmoWu+s8MVYoK8s/7CxSeCu/LOpT3K2Vny38kA/77TLuOwFOvL4dqQYDiC77JJRd9XhaeCf+fdTjvPzYDvKdef+gz7VoKhguKz/vUADVfLr7gs7XgTPgnDAPmnvjkM/Vqtd+c67w+U69tBbrgnPe068ZQ7QwMQM1HgXhy/f96pvr99SwZhwstkne2VMZsmL0jfNmGGaHz90tAlTJ4TLzFDnTNeWB4rIEKgZzvcxJowP+SCz5nCs8F2EOFMYDvtGs+3tOuXQd7Z9q1DVBhJAOAGBwGh7LWJe+vV4FKM/jOPqsHdPZueCASNAAYBkAv/IzbMMUubNGOYP85J/4gaybKAFAgJmyanBK2ZHsNRjRS3YCSC94HSTfg+gqodgaG0nPeqkBDthFnwLV/QNtXAJO0NFQ7ApRe8vYCJqQbuAzwnnr1rM+UGzZQ5dhB2pk01qxDBYXAzPQ+DmhACNiAYy+8pl5Nrq//zwRVRhikbeoRSd7RKxQ6f4tE9OITfFBhNMDAAABc9ZyFtr+zcAAAAABJRU5ErkJggg==";
+            this.elem.appendChild(img);
+            // message
+            this.messageElem = document.createElement("span");
+            this.elem.appendChild(this.messageElem);
+            // help
+            let help = document.createElement("a");
+            help.style.cssText = "padding-left: 5px";
+            help.innerText = "?";
+            help.href = "javascript:;";
+            this.elem.appendChild(help);
+            help.addEventListener("click", () => {
+                let msg = "HITS\nCount of ajax calls served from the cache.\n\n";
+                msg += "MISSES\nCount of ajax calls not found in the cache.\n\n";
+                msg += "IGNORES\nCount of ajax calls not routed to the cache because they don't match the rules you have setup.\n\n";
+                msg += "PENDING\nCount of missed ajax calls that are still waiting for response.";
+                alert(msg);
+            });
+            document.body.appendChild(this.elem);
+        }
+        update() {
+            if (settings.hide) {
+                return;
+            }
+            if (this.elem == null || this.elem.parentElement == null) {
+                this.initialize();
+            }
+            let message = AjaxProxy.hits + " hits / " + AjaxProxy.misses + " misses / " + AjaxProxy.ignores + " ignores / " + AjaxProxy.pending + " pending";
+            this.messageElem.innerText = message;
+        }
+    }
     class AjaxProxy {
         constructor(proxyFn) {
             this.proxyFn = proxyFn;
@@ -73,6 +113,7 @@ function ScriptForLocalCacheChromeExtension() {
                 data: null
             };
             this.responseState = {
+                time: (new Date()).toISOString(),
                 readyState: 0,
                 response: "",
                 responseText: "",
@@ -91,13 +132,43 @@ function ScriptForLocalCacheChromeExtension() {
             if (search.startsWith("?")) {
                 search = search.substr(1);
             }
-            let cacheBusters = ["_", "v"];
+            let cacheBusters = this.stringToArray(settings.queryStringsToIgnore);
             let qs = search.split("&").filter(s => {
                 return s !== "" && cacheBusters.filter(cb => s.startsWith(cb + "=")).length === 0;
             });
             search = qs.join("&");
             a.search = search;
             return AjaxProxy.md5(`${a.href.toLocaleLowerCase()}|${(this.requestKey.method || "GET").toLocaleLowerCase()}|${JSON.stringify(this.requestKey.data || "")}`, null, null);
+        }
+        stringToArray(str) {
+            return (str || "").replace(/\r/g, "\n").split("\n").map(s => s.trim()).filter(s => s != "");
+        }
+        responseIsExpired(responseState) {
+            if (settings.expirationInDays == null) {
+                return false;
+            }
+            let expirationInDays = Number(settings.expirationInDays);
+            if (isNaN(expirationInDays)) {
+                return false;
+            }
+            let date = new Date(responseState.time);
+            let now = new Date();
+            let milliseconds = now.getTime() - date.getTime();
+            let days = milliseconds / 1000 / 60 / 60 / 24;
+            return days > expirationInDays;
+        }
+        ignoreRequest() {
+            let httpMethodBlackList = this.stringToArray((settings.httpMethodBlackList || "").toLocaleLowerCase());
+            if (httpMethodBlackList.indexOf(this.requestKey.method.toLocaleLowerCase()) > -1) {
+                return true;
+            }
+            let ajaxUrlBlackList = this.stringToArray((settings.ajaxUrlBlackList || "").toLocaleLowerCase());
+            for (let i = 0; i < ajaxUrlBlackList.length; i++) {
+                if (this.requestKey.url.toLocaleLowerCase().startsWith(ajaxUrlBlackList[i])) {
+                    return true;
+                }
+            }
+            return false;
         }
         open(method, url, async, user, password) {
             this.requestKey.url = url;
@@ -107,28 +178,35 @@ function ScriptForLocalCacheChromeExtension() {
         send(data) {
             this.requestKey.data = data;
             this.requestKeyHash = this.getRequestKeyHash();
-            if (this.requestKey.method.toLocaleLowerCase() === "put") {
+            if (this.ignoreRequest()) {
+                AjaxProxy.ignores++;
+                AjaxProxy.pending++;
+                AjaxProxy.statusBar.update();
                 this.realAjax.send.apply(this.realAjax, arguments);
-                return;
             }
-            AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
-                if (cachedResponseState == null) {
-                    console.log("MISS", this.requestKey.url, this.requestKey.method);
-                    this.realAjax.send.apply(this.realAjax, arguments);
-                }
-                else {
-                    console.log("HIT", this.requestKey.url, this.requestKey.method);
-                    this.isCacheHit = true;
-                    this.responseState = cachedResponseState;
-                    if ((this.responseState.responseType === "" || this.responseState.responseType === "text") && this.responseState.responseText == "") {
-                        this.responseState.responseText = this.responseState.response;
+            else {
+                AjaxProxy.indexedDB.getItem(this.requestKeyHash).then(cachedResponseState => {
+                    if (cachedResponseState == null || this.responseIsExpired(cachedResponseState)) {
+                        AjaxProxy.misses++;
+                        AjaxProxy.pending++;
+                        AjaxProxy.statusBar.update();
+                        this.realAjax.send.apply(this.realAjax, arguments);
                     }
-                    let ev = new Event("readystatechange");
-                    this.realAjax.dispatchEvent(ev);
-                    ev = new Event("load");
-                    this.realAjax.dispatchEvent(ev);
-                }
-            });
+                    else {
+                        AjaxProxy.hits++;
+                        AjaxProxy.statusBar.update();
+                        this.isCacheHit = true;
+                        this.responseState = cachedResponseState;
+                        if ((this.responseState.responseType === "" || this.responseState.responseType === "text") && this.responseState.responseText == "") {
+                            this.responseState.responseText = this.responseState.response;
+                        }
+                        let ev = new Event("readystatechange");
+                        this.realAjax.dispatchEvent(ev);
+                        ev = new Event("load");
+                        this.realAjax.dispatchEvent(ev);
+                    }
+                });
+            }
         }
         getAllResponseHeaders() {
             if (!this.isCacheHit) {
@@ -152,6 +230,7 @@ function ScriptForLocalCacheChromeExtension() {
             return ret;
         }
         realAjax_onreadystatechange(ev) {
+            // update the cache
             if (this.realAjax.readyState === 4 &&
                 !this.isCacheHit && this.realAjax.status < 400 &&
                 this.requestKey.method.toLocaleLowerCase() !== "put" &&
@@ -171,8 +250,15 @@ function ScriptForLocalCacheChromeExtension() {
                 this.responseState.responseHeaders = this.realAjax.getAllResponseHeaders();
                 AjaxProxy.indexedDB.setItem(this.requestKeyHash, this.responseState);
             }
+            if (this.realAjax.readyState == 4) {
+                AjaxProxy.pending--;
+                AjaxProxy.statusBar.update();
+            }
             if (this.proxyFn.onreadystatechange) {
                 return this.proxyFn.onreadystatechange(ev);
+            }
+            else {
+                return null;
             }
         }
         addXmlHttpRequestProperties(proxyFn) {
@@ -251,6 +337,11 @@ function ScriptForLocalCacheChromeExtension() {
         return md5;
     }();
     AjaxProxy.indexedDB = new IndexedDB("LocalCacheChromeExtension", "ResponseStates");
+    AjaxProxy.statusBar = new StatusBar();
+    AjaxProxy.hits = 0;
+    AjaxProxy.misses = 0;
+    AjaxProxy.pending = 0;
+    AjaxProxy.ignores = 0;
     var unescape = window.unescape; // typing
     var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) { return new (P || (P = Promise))(function (resolve, reject) { function fulfilled(value) { try {
         step(generator.next(value));
@@ -269,19 +360,37 @@ function ScriptForLocalCacheChromeExtension() {
         new AjaxProxy(this);
     };
 }
-let script = document.createElement("script");
-script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension();";
-document.documentElement.appendChild(script);
-/*
-if disabled don't start db
-
-SETTINGS
-Pause
-Clear
-cache buster strings
-cache days
-black list methods
-black list ajax paths
-white list of website urls
-*/ 
+let settings = {
+    everSet: false,
+    disable: false,
+    hide: false,
+    expirationInDays: "7",
+    queryStringsToIgnore: "_\n",
+    websiteWhiteList: "",
+    ajaxUrlBlackList: "",
+    httpMethodBlackList: "PUT\nDELETE\nPATCH\n"
+};
+chrome.storage.sync.get(Object.keys(settings), (loadedSettings) => {
+    if (loadedSettings.everSet) {
+        settings = Object.assign({}, loadedSettings);
+    }
+    if (settings.disable) {
+        return;
+    }
+    let websiteWhiteList = (settings.websiteWhiteList || "").toLocaleLowerCase().replace(/\r/g, "\n").split("\n").map(s => s.trim()).filter(s => s != "");
+    if (websiteWhiteList.length > 0) {
+        let match = false;
+        for (let i = 0; i < websiteWhiteList.length; i++) {
+            if (document.location.toString().toLocaleLowerCase().startsWith(websiteWhiteList[i])) {
+                match = true;
+            }
+        }
+        if (!match) {
+            return;
+        }
+    }
+    let script = document.createElement("script");
+    script.innerHTML = ScriptForLocalCacheChromeExtension.toString() + ";ScriptForLocalCacheChromeExtension(" + JSON.stringify(settings) + ");";
+    document.documentElement.appendChild(script);
+});
 //# sourceMappingURL=main.js.map
