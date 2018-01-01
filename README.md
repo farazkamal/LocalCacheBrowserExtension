@@ -1,2 +1,2 @@
 # LocalCacheBrowserExtension
-Cache ajax requests to your local machine, making page loads faster and more predictable.
+This is a lightweight, configurable Chrome extension that will cache responses for ajax requests to user's machine using the indexedDB API, making future page loads faster and more reliable. This is great when you are demoing your ajax heavy website and want to ensure a smooth demo. Also, if you are a front end developer working with unstable or slow data backends, this extension will save you a ton of time and help you keep your momentum.
